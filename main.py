@@ -77,8 +77,6 @@ def _load_driver():
     service = Service(executable_path=str(CHROME_DRIVER_PATH))
 
     options = webdriver.ChromeOptions()
-    # 모바일 인터페이스가 더 편함. width에 따른 반응형.
-    options.add_argument("window-size=760,1000")
     options.add_argument("force-device-scale-factor=1")
     options.add_argument("log-level=3")
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -122,18 +120,20 @@ def _login(driver: WebDriver):
         final_button.send_keys(Keys.ENTER)
 
     def login():
+        driver.get("https://ticket.interpark.com/Gate/TPLogin.asp")
+        driver.switch_to.frame(driver.find_element(by=By.TAG_NAME, value="iframe"))
         WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
-            EC.url_contains("accounts.interpark.com")
+            EC.presence_of_element_located((By.ID, "btn_login"))
         )
+
         driver.find_element(by=By.ID, value="userId").send_keys(USER_ID)
         driver.find_element(by=By.ID, value="userPwd").send_keys(USER_PW)
         driver.find_element(by=By.ID, value="btn_login").click()
 
-    driver.get(URL)
-
-    close_popup()
-    click_final_button()
     login()
+    driver.get(URL)
+    # 모바일 인터페이스가 더 편함. width에 따른 반응형 디자인임.
+    driver.set_window_size(760, 1000)
     close_popup()
     click_final_button()
 
