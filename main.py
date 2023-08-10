@@ -80,6 +80,8 @@ def _load_driver():
     # 모바일 인터페이스가 더 편함. width에 따른 반응형.
     options.add_argument("window-size=760,900")
     options.add_argument("force-device-scale-factor=1")
+    options.add_argument("log-level=3")
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
     driver = webdriver.Chrome(service=service, options=options)
     driver.implicitly_wait(WAIT_LIMIT_IN_SECONDS)
