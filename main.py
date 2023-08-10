@@ -33,7 +33,7 @@ USER_PW = "YOUR_PW"
 REFRESH_INTERVAL_IN_SECONDS = 0.5
 # 브라우저 로딩에 기다려줄 최대 시간
 WAIT_LIMIT_IN_SECONDS = 5
-# 드라이버 리로드까지의 루프 횟수.
+# 드라이버 리로드까지의 루프 횟수. 루프문을 계속 돌리면 메모리 때문에 크롬이 에러가 남. 정해진 횟수마다 드라이버 리로드 시켜준다.
 LOOP_LIMIT = 1200
 
 TMP_CAPTCHA_IMAGE_PATH = Path(__file__).parent.absolute() / "_captcha.png"
@@ -246,10 +246,9 @@ def _find_canceled_ticket(driver: WebDriver):
         return -1
 
     start, end = get_start_and_end_range()
-    # 루프문을 계속 돌리면 메모리 때문에 크롬이 에러가 남. 정해진 횟수마다 드라이버 리로드 시켜준다.
     i = 0
     while i < LOOP_LIMIT:
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
             EC.presence_of_element_located((By.ID, "seatClass1"))
         )
 
@@ -279,7 +278,7 @@ def _get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     seat_auto_assign_button = driver.find_element(
         by=By.XPATH, value="/html/body/div/div[3]/a[1]"
     )
-    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
+    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
         EC.element_to_be_clickable(seat_auto_assign_button)
     )
     seat_auto_assign_button.click()
@@ -289,7 +288,7 @@ def _get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
 
 def _buy(driver: WebDriver, ticket_name: str):
     def up_ticket_count():
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
             EC.presence_of_element_located((By.ID, "delymethod_22012"))
         )
 
@@ -309,7 +308,7 @@ def _buy(driver: WebDriver, ticket_name: str):
 
     def click_buy_button():
         buy_button = driver.find_element(by=By.ID, value="step_noti_txt")
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
             EC.text_to_be_present_in_element_attribute(
                 (By.ID, "step_noti_txt"), "class", "buy"
             )
@@ -319,7 +318,9 @@ def _buy(driver: WebDriver, ticket_name: str):
     def handle_result():
         # alert가 뜨면 실패한 것
         try:
-            WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(EC.alert_is_present())
+            WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+                EC.alert_is_present()
+            )
             alert = driver.switch_to.alert
             alert.accept()
             _print_msg(f"{ticket_name} 좌석 배정 실패")
