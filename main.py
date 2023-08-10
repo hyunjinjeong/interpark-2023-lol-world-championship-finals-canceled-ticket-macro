@@ -71,8 +71,6 @@ def run(driver: WebDriver = None):
         _print_msg(f"{str(err)}, 드라이버 재시작")
         _exit_driver(driver)
         run()
-    else:
-        _exit_driver(driver)
 
 
 def _load_driver():
@@ -324,11 +322,11 @@ def _buy(driver: WebDriver, ticket_name: str):
             WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(EC.alert_is_present())
             alert = driver.switch_to.alert
             alert.accept()
-            _print_msg(f"{ticket_name} 구매 실패")
+            _print_msg(f"{ticket_name} 좌석 배정 실패")
             Beep(frequency=500, duration=1000)
         except TimeoutException:
-            _print_msg(f"{ticket_name} 구매 성공")
-            Beep(frequency=1000, duration=1000)
+            _print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
+            Beep(frequency=1000, duration=3000)
         else:
             raise _BuyFailException()
 
