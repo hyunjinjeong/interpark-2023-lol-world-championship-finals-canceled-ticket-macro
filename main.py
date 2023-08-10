@@ -47,7 +47,6 @@ class _BuyFailException(Exception):
     pass
 
 
-# 관심 강좌에서 자리가 비는 강의를 찾아서 수강 신청해준다.
 def run(driver: WebDriver = None):
     try:
         if driver is None:
