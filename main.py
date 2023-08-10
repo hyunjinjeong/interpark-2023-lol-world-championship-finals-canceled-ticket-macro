@@ -78,7 +78,7 @@ def _load_driver():
 
     options = webdriver.ChromeOptions()
     # 모바일 인터페이스가 더 편함. width에 따른 반응형.
-    options.add_argument("window-size=760,900")
+    options.add_argument("window-size=760,1000")
     options.add_argument("force-device-scale-factor=1")
     options.add_argument("log-level=3")
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -272,6 +272,9 @@ def _find_canceled_ticket(driver: WebDriver):
 def _get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     tier = driver.find_element(
         by=By.XPATH, value=f"/html/body/div/div[2]/div[2]/ul/li[{row_num}]"
+    )
+    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+        EC.element_to_be_clickable(tier)
     )
     tier_name = tier.get_attribute("data-seatgradename")
 
