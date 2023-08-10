@@ -44,44 +44,36 @@ TMP_CAPTCHA_IMAGE_PATH = Path(__file__).parent.absolute() / "_captcha.png"
 CHROME_DRIVER_PATH = Path(__file__).parent.absolute() / "static" / "chromedriver.exe"
 
 
-class _LoopEndException(Exception):
+class LoopEndException(Exception):
     pass
 
 
-class _BuyFailException(Exception):
+class BuyFailException(Exception):
     pass
 
 
-def run(driver: WebDriver = None):
+def run():
+    should_retry = False
     try:
-        if driver is None:
-            driver = _load_driver()
+        driver = load_driver()
 
-        _login(driver)
-        _captcha(driver)
-        row_num = _find_canceled_ticket(driver)
+        login_to_site(driver)
+        captcha(driver)
+        row_num = find_canceled_ticket(driver)
 
-        ticket_name = _get_ticket_name_to_buy_and_click(driver, row_num)
-        _buy(driver, ticket_name)
-    except _LoopEndException:
-        _print_msg(f"루프 {LOOP_LIMIT}회 도달. 드라이버 재시작.")
-        _exit_driver(driver)
-        run()
-    except _BuyFailException:
-        _print_msg("구매 실패, 드라이버 재시작")
-        _exit_driver(driver)
-        run()
-    except WebDriverException as webdriver_exception:
-        _print_msg(f"WebDriver 에러: {str(webdriver_exception)}, 드라이버 재시작")
-        _exit_driver(driver)
-        run()
-    except Exception as exception:
-        _print_msg(f"알 수 없는 에러: {str(exception)}")
+        ticket_name = get_ticket_name_to_buy_and_click(driver, row_num)
+        try_to_buy(driver, ticket_name)
+        # 20분 정도 대기 후 종료
+        sleep(60 * 20)
+    except (LoopEndException, BuyFailException, WebDriverException):
+        should_retry = True
     finally:
-        _exit_driver(driver)
+        driver.quit()
+        if should_retry:
+            run()
 
 
-def _load_driver():
+def load_driver():
     service = Service(executable_path=str(CHROME_DRIVER_PATH))
 
     options = webdriver.ChromeOptions()
@@ -91,20 +83,11 @@ def _load_driver():
 
     driver = webdriver.Chrome(service=service, options=options)
     driver.implicitly_wait(WAIT_LIMIT_IN_SECONDS)
-
-    _print_msg("드라이버 시작")
+    print_msg("드라이버 시작")
     return driver
 
 
-def _exit_driver(driver: WebDriver):
-    if driver is None:
-        return
-
-    _print_msg("드라이버 종료")
-    driver.quit()
-
-
-def _login(driver: WebDriver):
+def login_to_site(driver: WebDriver):
     def close_popup():
         popup = driver.find_element(
             by=By.XPATH, value="/html/body/div[1]/div/div[2]/div/div[3]/button"
@@ -147,14 +130,14 @@ def _login(driver: WebDriver):
 
 
 # ref: https://github.com/clyde0813/Interpark-Ticketing/blob/main/interpark.py
-def _captcha(driver: WebDriver):
+def captcha(driver: WebDriver):
     def save_captcha_image():
         captcha_image_element = driver.find_element(by=By.ID, value="imgCaptcha")
         captcha_image = captcha_image_element.screenshot_as_png
         with open(TMP_CAPTCHA_IMAGE_PATH, "wb") as f:
             f.write(captcha_image)
 
-    def extract_string_from_captcha():
+    def extract_text_from_captcha():
         image = cv.imread(str(TMP_CAPTCHA_IMAGE_PATH))
         image = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         image = cv.adaptiveThreshold(
@@ -194,7 +177,7 @@ def _captcha(driver: WebDriver):
 
             if captcha_wrong_alert.get_attribute("class") == "alert":
                 driver.execute_script("reloadCapcha();")
-                _captcha(driver)
+                captcha(driver)
         except NoSuchElementException:  # 성공한 경우 없어짐
             pass
 
@@ -203,7 +186,7 @@ def _captcha(driver: WebDriver):
     )
 
     save_captcha_image()
-    captcha_text = extract_string_from_captcha()
+    captcha_text = extract_text_from_captcha()
     submit_captcha(captcha_text)
     retry_if_wrong()
 
@@ -211,13 +194,13 @@ def _captcha(driver: WebDriver):
         remove(TMP_CAPTCHA_IMAGE_PATH)
 
 
-def _find_canceled_ticket(driver: WebDriver):
+def find_canceled_ticket(driver: WebDriver):
     def get_start_and_end_range():
-        _print_msg(f"최소 티어: {TARGET_MIN_TIER}, 최대 티어: {TARGET_MAX_TIER}")
+        print_msg(f"최소 티어: {TARGET_MIN_TIER}, 최대 티어: {TARGET_MAX_TIER}")
 
         start, end = 0, 11
         if TARGET_MIN_TIER > TARGET_MAX_TIER:
-            _print_msg(
+            print_msg(
                 f"전체 범위로 초기화. 최소 티어({TARGET_MIN_TIER})가 최대 티어({TARGET_MAX_TIER})보다 높음."
             )
             return start, end
@@ -271,12 +254,12 @@ def _find_canceled_ticket(driver: WebDriver):
         driver.refresh()
 
     if row_num == -1:
-        raise _LoopEndException()
+        raise LoopEndException()
 
     return row_num
 
 
-def _get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
+def get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     tier = driver.find_element(
         by=By.XPATH, value=f"/html/body/div/div[2]/div[2]/ul/li[{row_num}]"
     )
@@ -298,7 +281,7 @@ def _get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     return tier_name
 
 
-def _buy(driver: WebDriver, ticket_name: str):
+def try_to_buy(driver: WebDriver, ticket_name: str):
     def up_ticket_count():
         WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
             EC.presence_of_element_located((By.ID, "delymethod_22012"))
@@ -335,15 +318,13 @@ def _buy(driver: WebDriver, ticket_name: str):
             )
             alert = driver.switch_to.alert
             alert.accept()
-            _print_msg(f"{ticket_name} 좌석 배정 실패")
+            print_msg(f"{ticket_name} 좌석 배정 실패")
             Beep(frequency=500, duration=1000)
         except TimeoutException:
-            _print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
+            print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
             Beep(frequency=1000, duration=3000)
-            # 20분 정도 대기
-            sleep(60 * 20)
         else:
-            raise _BuyFailException()
+            raise BuyFailException()
 
     up_ticket_count()
     click_delivery_method_button()
@@ -351,7 +332,7 @@ def _buy(driver: WebDriver, ticket_name: str):
     handle_result()
 
 
-def _print_msg(msg):
+def print_msg(msg: str):
     def get_current_date_time_kst():
         now = datetime.now(timezone(timedelta(hours=9)))
         return f"[{now.isoformat().split('.')[0]}]"
