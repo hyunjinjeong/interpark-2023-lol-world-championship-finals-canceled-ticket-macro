@@ -1,7 +1,7 @@
 # 파이썬 내장 라이브러리
 import re
 from time import sleep
-from winsound import Beep
+from winsound import Beep, MessageBeep
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from os import remove
@@ -67,6 +67,7 @@ def run():
         sleep(60 * 20)
     except (LoopEndException, BuyFailException, WebDriverException):
         should_retry = True
+        MessageBeep()
     finally:
         driver.quit()
         if should_retry:
