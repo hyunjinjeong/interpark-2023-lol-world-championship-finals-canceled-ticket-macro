@@ -339,11 +339,11 @@ def _buy(driver: WebDriver, ticket_name: str):
 
 
 def _print_msg(msg):
-    def get_current_time():
+    def get_current_date_time_kst():
         now = datetime.now(timezone(timedelta(hours=9)))
-        return f"[{now.isoformat()}]"
+        return f"[{now.isoformat().split('.')[0]}]"
 
-    print(get_current_time(), msg)
+    print(get_current_date_time_kst(), msg)
 
 
 if __name__ == "__main__":
