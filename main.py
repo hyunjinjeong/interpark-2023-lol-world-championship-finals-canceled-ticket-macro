@@ -23,8 +23,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # 목표 URL
 URL = "https://tickets.interpark.com/special/sports/promotion?seq=22"
-# Tier 어디까지 확인할 것인지... -1이면 전부
-TARGET_MAX_TIER = -1
+# 목표 좌석 Tier 범위. 각각 1부터 8까지 가능. 나머지 값은 무시 (전체 범위). TARGET_MIN_TIER <= TARGET_MAX_TIER여야 함.
+TARGET_MIN_TIER = 1
+TARGET_MAX_TIER = 8
 # 로그인에 사용되는 아이디와 비밀번호
 USER_ID = "YOUR_ID"
 USER_PW = "YOUR_PW"
@@ -204,28 +205,57 @@ def _captcha(driver: WebDriver):
 
 
 def _find_canceled_ticket(driver: WebDriver):
-    def get_row_num_of_canceled_ticket():
+    def get_start_and_end_range():
+        _print_msg(f"최소 티어: {TARGET_MIN_TIER}, 최대 티어: {TARGET_MAX_TIER}")
+
+        start, end = 0, 11
+        if TARGET_MIN_TIER > TARGET_MAX_TIER:
+            _print_msg(
+                f"전체 범위로 초기화. 최소 티어({TARGET_MIN_TIER})가 최대 티어({TARGET_MAX_TIER})보다 높음."
+            )
+            return start, end
+
+        if TARGET_MIN_TIER in (1, 2, 3, 4):
+            start = TARGET_MIN_TIER - 1
+        elif TARGET_MIN_TIER in (5, 6, 7):
+            start = TARGET_MIN_TIER
+        elif TARGET_MIN_TIER == 8:
+            start = TARGET_MIN_TIER + 1  # 9
+
+        if TARGET_MAX_TIER in (1, 2, 3):
+            end = TARGET_MAX_TIER
+        elif TARGET_MAX_TIER in (4, 5, 6):
+            end = TARGET_MAX_TIER + 1
+        elif TARGET_MAX_TIER == 7:
+            end = TARGET_MAX_TIER + 2  # 9
+        elif TARGET_MAX_TIER == 8:
+            end = TARGET_MAX_TIER + 3  # 11
+
+        return start, end
+
+    def get_row_num_of_canceled_ticket(start: int, end: int):
         html = driver.page_source
         soup = BeautifulSoup(html, "html.parser")
 
         remained_counts = [
             int(li.get("data-remaincnt"))
             for li in soup.select("div.seatListBlock > ul > li")
-        ][:TARGET_MAX_TIER]
+        ]
 
-        for index, remained_count in enumerate(remained_counts):
+        for index, remained_count in enumerate(remained_counts[start:end]):
             if remained_count != 0:
                 return index + 1
         return -1
 
-    i = 0
+    start, end = get_start_and_end_range()
     # 루프문을 계속 돌리면 메모리 때문에 크롬이 에러가 남. 정해진 횟수마다 드라이버 리로드 시켜준다.
+    i = 0
     while i < LOOP_LIMIT:
         WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
             EC.presence_of_element_located((By.ID, "seatClass1"))
         )
 
-        row_num = get_row_num_of_canceled_ticket()
+        row_num = get_row_num_of_canceled_ticket(start, end)
         if row_num != -1:
             break
 
