@@ -15,7 +15,11 @@ from selenium import webdriver
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    WebDriverException,
+)
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -67,10 +71,14 @@ def run(driver: WebDriver = None):
         _print_msg("구매 실패, 드라이버 재시작")
         _exit_driver(driver)
         run()
-    except Exception as err:
-        _print_msg(f"{str(err)}, 드라이버 재시작")
+    except WebDriverException as webdriver_exception:
+        _print_msg(f"WebDriver 에러: {str(webdriver_exception)}, 드라이버 재시작")
         _exit_driver(driver)
         run()
+    except Exception as exception:
+        _print_msg(f"알 수 없는 에러: {str(exception)}")
+    finally:
+        _exit_driver(driver)
 
 
 def _load_driver():
@@ -178,18 +186,17 @@ def _captcha(driver: WebDriver):
         )
         captcha_submit_button.click()
 
-    def retry_if_wrong(captcha_text: str):
+    def retry_if_wrong():
         try:
             captcha_wrong_alert = driver.find_element(
                 by=By.XPATH, value="/html/body/div/div/div/div/div[2]/div"
             )
 
             if captcha_wrong_alert.get_attribute("class") == "alert":
-                _print_msg(f"캡챠 실패: {captcha_text}")
                 driver.execute_script("reloadCapcha();")
                 _captcha(driver)
         except NoSuchElementException:  # 성공한 경우 없어짐
-            _print_msg(f"캡챠 성공: {captcha_text}")
+            pass
 
     WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS).until(
         EC.presence_of_element_located((By.ID, "imgCaptcha"))
@@ -198,7 +205,7 @@ def _captcha(driver: WebDriver):
     save_captcha_image()
     captcha_text = extract_string_from_captcha()
     submit_captcha(captcha_text)
-    retry_if_wrong(captcha_text)
+    retry_if_wrong()
 
     if TMP_CAPTCHA_IMAGE_PATH.exists():
         remove(TMP_CAPTCHA_IMAGE_PATH)
@@ -333,6 +340,8 @@ def _buy(driver: WebDriver, ticket_name: str):
         except TimeoutException:
             _print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
             Beep(frequency=1000, duration=3000)
+            # 20분 정도 대기
+            sleep(60 * 20)
         else:
             raise _BuyFailException()
 
