@@ -241,7 +241,7 @@ def find_canceled_ticket(driver: WebDriver):
     start, end = get_start_and_end_range()
     i = 0
     while i < LOOP_LIMIT:
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
             EC.presence_of_element_located((By.ID, "seatClass1"))
         )
 
@@ -264,7 +264,7 @@ def get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     tier = driver.find_element(
         by=By.XPATH, value=f"/html/body/div/div[2]/div[2]/ul/li[{row_num}]"
     )
-    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
         EC.element_to_be_clickable(tier)
     )
     tier_name = tier.get_attribute("data-seatgradename")
@@ -274,7 +274,7 @@ def get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
     seat_auto_assign_button = driver.find_element(
         by=By.XPATH, value="/html/body/div/div[3]/a[1]"
     )
-    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+    WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
         EC.element_to_be_clickable(seat_auto_assign_button)
     )
     seat_auto_assign_button.click()
@@ -284,7 +284,7 @@ def get_ticket_name_to_buy_and_click(driver: WebDriver, row_num: int):
 
 def try_to_buy(driver: WebDriver, ticket_name: str):
     def up_ticket_count():
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
             EC.presence_of_element_located((By.ID, "delymethod_22012"))
         )
 
@@ -304,7 +304,7 @@ def try_to_buy(driver: WebDriver, ticket_name: str):
 
     def click_buy_button():
         buy_button = driver.find_element(by=By.ID, value="step_noti_txt")
-        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+        WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
             EC.text_to_be_present_in_element_attribute(
                 (By.ID, "step_noti_txt"), "class", "buy"
             )
@@ -314,7 +314,7 @@ def try_to_buy(driver: WebDriver, ticket_name: str):
     def handle_result():
         # alert가 뜨면 실패한 것
         try:
-            WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.1).until(
+            WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
                 EC.alert_is_present()
             )
             alert = driver.switch_to.alert
