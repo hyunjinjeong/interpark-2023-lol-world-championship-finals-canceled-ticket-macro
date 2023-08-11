@@ -34,11 +34,11 @@ TARGET_MAX_TIER = 8
 USER_ID = "YOUR_ID"
 USER_PW = "YOUR_PW"
 # 새로고침 주기.
-REFRESH_INTERVAL_IN_SECONDS = 0.5
+REFRESH_INTERVAL_IN_SECONDS = 0.3
 # 브라우저 로딩에 기다려줄 최대 시간
 WAIT_LIMIT_IN_SECONDS = 5
 # 드라이버 리로드까지의 루프 횟수. 루프문을 계속 돌리면 메모리 때문에 크롬이 에러가 남. 정해진 횟수마다 드라이버 리로드 시켜준다.
-LOOP_LIMIT = 2400
+LOOP_LIMIT = 5000
 
 TMP_CAPTCHA_IMAGE_PATH = Path(__file__).parent.absolute() / "_captcha.png"
 CHROME_DRIVER_PATH = Path(__file__).parent.absolute() / "static" / "chromedriver.exe"
