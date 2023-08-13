@@ -34,7 +34,7 @@ TARGET_MAX_TIER = 8
 USER_ID = "YOUR_ID"
 USER_PW = "YOUR_PW"
 # 새로고침 주기.
-REFRESH_INTERVAL_IN_SECONDS = 0.3
+REFRESH_INTERVAL_IN_SECONDS = 0.5
 # 브라우저 로딩에 기다려줄 최대 시간
 WAIT_LIMIT_IN_SECONDS = 5
 # 드라이버 리로드까지의 루프 횟수. 루프문을 계속 돌리면 메모리 때문에 크롬이 에러가 남. 정해진 횟수마다 드라이버 리로드 시켜준다.
@@ -52,14 +52,14 @@ class BuyFailException(Exception):
     pass
 
 
-def run():
+def run(start: int, end: int):
     should_retry = False
     try:
         driver = load_driver()
 
         login_to_site(driver)
         captcha(driver)
-        row_num = find_canceled_ticket(driver)
+        row_num = find_canceled_ticket(driver, start, end)
 
         ticket_name = get_ticket_name_to_buy_and_click(driver, row_num)
         try_to_buy(driver, ticket_name)
@@ -70,7 +70,36 @@ def run():
     finally:
         driver.quit()
         if should_retry:
-            run()
+            run(start, end)
+
+
+def get_start_and_end_range():
+    print_msg(f"최소 티어: {TARGET_MIN_TIER}, 최대 티어: {TARGET_MAX_TIER}")
+
+    start, end = 0, 11
+    if TARGET_MIN_TIER > TARGET_MAX_TIER:
+        print_msg(
+            f"전체 범위로 초기화. 최소 티어({TARGET_MIN_TIER})가 최대 티어({TARGET_MAX_TIER})보다 높음."
+        )
+        return start, end
+
+    if TARGET_MIN_TIER in (1, 2, 3, 4):
+        start = TARGET_MIN_TIER - 1
+    elif TARGET_MIN_TIER in (5, 6, 7):
+        start = TARGET_MIN_TIER
+    elif TARGET_MIN_TIER == 8:
+        start = TARGET_MIN_TIER + 1  # 9
+
+    if TARGET_MAX_TIER in (1, 2, 3):
+        end = TARGET_MAX_TIER
+    elif TARGET_MAX_TIER in (4, 5, 6):
+        end = TARGET_MAX_TIER + 1
+    elif TARGET_MAX_TIER == 7:
+        end = TARGET_MAX_TIER + 2  # 9
+    elif TARGET_MAX_TIER == 8:
+        end = TARGET_MAX_TIER + 3  # 11
+
+    return start, end
 
 
 def load_driver():
@@ -195,36 +224,8 @@ def captcha(driver: WebDriver):
         remove(TMP_CAPTCHA_IMAGE_PATH)
 
 
-def find_canceled_ticket(driver: WebDriver):
-    def get_start_and_end_range():
-        print_msg(f"최소 티어: {TARGET_MIN_TIER}, 최대 티어: {TARGET_MAX_TIER}")
-
-        start, end = 0, 11
-        if TARGET_MIN_TIER > TARGET_MAX_TIER:
-            print_msg(
-                f"전체 범위로 초기화. 최소 티어({TARGET_MIN_TIER})가 최대 티어({TARGET_MAX_TIER})보다 높음."
-            )
-            return start, end
-
-        if TARGET_MIN_TIER in (1, 2, 3, 4):
-            start = TARGET_MIN_TIER - 1
-        elif TARGET_MIN_TIER in (5, 6, 7):
-            start = TARGET_MIN_TIER
-        elif TARGET_MIN_TIER == 8:
-            start = TARGET_MIN_TIER + 1  # 9
-
-        if TARGET_MAX_TIER in (1, 2, 3):
-            end = TARGET_MAX_TIER
-        elif TARGET_MAX_TIER in (4, 5, 6):
-            end = TARGET_MAX_TIER + 1
-        elif TARGET_MAX_TIER == 7:
-            end = TARGET_MAX_TIER + 2  # 9
-        elif TARGET_MAX_TIER == 8:
-            end = TARGET_MAX_TIER + 3  # 11
-
-        return start, end
-
-    def get_row_num_of_canceled_ticket(start: int, end: int):
+def find_canceled_ticket(driver: WebDriver, start: int, end: int):
+    def get_row_num_of_canceled_ticket():
         html = driver.page_source
         soup = BeautifulSoup(html, "html.parser")
 
@@ -238,14 +239,13 @@ def find_canceled_ticket(driver: WebDriver):
                 return index + 1
         return -1
 
-    start, end = get_start_and_end_range()
     i = 0
     while i < LOOP_LIMIT:
         WebDriverWait(driver, WAIT_LIMIT_IN_SECONDS, poll_frequency=0.01).until(
             EC.presence_of_element_located((By.ID, "seatClass1"))
         )
 
-        row_num = get_row_num_of_canceled_ticket(start, end)
+        row_num = get_row_num_of_canceled_ticket()
         if row_num != -1:
             break
 
@@ -323,7 +323,7 @@ def try_to_buy(driver: WebDriver, ticket_name: str):
             Beep(frequency=500, duration=1000)
         except TimeoutException:
             print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
-            Beep(frequency=1000, duration=3000)
+            Beep(frequency=1000, duration=60000)  # 1분
         else:
             raise BuyFailException()
 
@@ -342,4 +342,5 @@ def print_msg(msg: str):
 
 
 if __name__ == "__main__":
-    run()
+    _start, _end = get_start_and_end_range()
+    run(_start, _end)
