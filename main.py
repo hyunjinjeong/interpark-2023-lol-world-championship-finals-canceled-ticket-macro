@@ -1,7 +1,7 @@
 # 파이썬 내장 라이브러리
 import re
 from time import sleep
-from winsound import Beep, MessageBeep
+from winsound import Beep
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from os import remove
@@ -113,7 +113,6 @@ def load_driver():
     driver = webdriver.Chrome(service=service, options=options)
     driver.implicitly_wait(WAIT_LIMIT_IN_SECONDS)
     print_msg("드라이버 시작")
-    MessageBeep()
     return driver
 
 
@@ -320,7 +319,6 @@ def try_to_buy(driver: WebDriver, ticket_name: str):
             alert = driver.switch_to.alert
             alert.accept()
             print_msg(f"{ticket_name} 좌석 배정 실패")
-            Beep(frequency=500, duration=1000)
         except TimeoutException:
             print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
             Beep(frequency=1000, duration=60000)  # 1분
