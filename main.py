@@ -319,6 +319,7 @@ def try_to_buy(driver: WebDriver, ticket_name: str):
             alert = driver.switch_to.alert
             alert.accept()
             print_msg(f"{ticket_name} 좌석 배정 실패")
+            sleep(10)
         except TimeoutException:
             print_msg(f"{ticket_name} 좌석 배정 성공. 7분 안에 결제 필요")
             Beep(frequency=1000, duration=60000)  # 1분
