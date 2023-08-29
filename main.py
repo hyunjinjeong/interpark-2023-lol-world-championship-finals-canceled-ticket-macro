@@ -53,8 +53,12 @@ class BuyFailException(Exception):
 
 
 def run(start: int, end: int):
+    driver = None
+    should_retry = False
+
     try:
-        driver = load_driver()
+        if driver is None:
+            driver = load_driver()
 
         login_to_site(driver)
         captcha(driver)
@@ -64,10 +68,13 @@ def run(start: int, end: int):
         try_to_buy(driver, ticket_name)
         # 20분 정도 대기 후 종료
         sleep(60 * 20)
-        driver.quit()
     except (LoopEndException, BuyFailException, WebDriverException):
-        driver.quit()
-        run(start, end)
+        should_retry = True
+    finally:
+        if driver is not None:
+            driver.quit()
+        if should_retry:
+            run(start, end)
 
 
 def get_start_and_end_range():
