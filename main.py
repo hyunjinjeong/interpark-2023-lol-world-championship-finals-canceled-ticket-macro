@@ -53,7 +53,6 @@ class BuyFailException(Exception):
 
 
 def run(start: int, end: int):
-    should_retry = False
     try:
         driver = load_driver()
 
@@ -65,12 +64,10 @@ def run(start: int, end: int):
         try_to_buy(driver, ticket_name)
         # 20분 정도 대기 후 종료
         sleep(60 * 20)
-    except (LoopEndException, BuyFailException, WebDriverException):
-        should_retry = True
-    finally:
         driver.quit()
-        if should_retry:
-            run(start, end)
+    except (LoopEndException, BuyFailException, WebDriverException):
+        driver.quit()
+        run(start, end)
 
 
 def get_start_and_end_range():
